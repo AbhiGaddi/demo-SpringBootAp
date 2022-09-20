@@ -5,6 +5,7 @@ import exception.ClientException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 
 @Repository
@@ -26,9 +29,14 @@ public class HomeControllers {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+    private final KafkaTemplate<String,Map<String,Object>> kafkaTemplate;
+    private static final String TOPIC = "kafka-producer";
+
+    public HomeControllers(KafkaTemplate<String, Map<String, Object>> kafkaTemplate) {this.kafkaTemplate = kafkaTemplate;}
+
 
     /*NotifierList */
-    @RequestMapping(value = "/notification/topic/list", method = RequestMethod.GET)
+    @RequestMapping(value = "/notification/topic", method = RequestMethod.GET)
     public ResponseEntity<String> notifierList() throws IOException {
         File file = ResourceUtils.getFile("/home/stpl/IdeaProjects/demo-SpringBootAp/src/main/resources/project.json");
         String content = new String(Files.readAllBytes(file.toPath()));
@@ -37,31 +45,39 @@ public class HomeControllers {
 
     /* Subscribe */
     @RequestMapping(value = "/notification/subscribe", method = RequestMethod.POST)
-    public ResponseEntity subscribe(@RequestBody Map<String,Object> body) {
+    public ResponseEntity subscribe(@RequestBody Map<String, Object> body) {
         try {
             validateRequest(body);
+            String timeStamp= String.valueOf(Instant.now());
+            UUID mId =UUID.randomUUID();
+            String action="notification/subscribe";
             String senderCode = (String) body.get("sender_code");
             String recipientCode = (String) body.get("recipient_code");
             String topicCode = (String) body.get("topic_code");
             String subscriptionId = senderCode + "-" + topicCode + "-" + recipientCode;
             int result = jdbcTemplate.update("INSERT INTO notifierlist(subscription_id,sender_code,recipient_code ,topic_code, subscription_status,created_on,updated_on) SELECT '" + subscriptionId + "', '" + senderCode + "', '" + recipientCode + "', '" + topicCode + "','Active',NOW(),NULL WHERE NOT EXISTS( SELECT subscription_id FROM notifierlist WHERE  subscription_id='" + subscriptionId + "')");
+
             if (result == 0)
                 throw new ClientException("subscription already exist");
             else {
+                Map<String,Object> kafkaProducer=Map.of("ets",timeStamp,"mid",mId,"action",action,"sender_code",senderCode,"recipient_code",recipientCode,"topic_code",topicCode,"subscription_id",subscriptionId );
+                kafkaTemplate.send(TOPIC,kafkaProducer);
                 Map<String, String> responseMap = Map.of("subscriptionId", subscriptionId, "subscription_status", "Active");
                 return ResponseEntity.ok(responseMap);
             }
         } catch (ClientException ex) {
             return ResponseEntity.badRequest().body(Map.of("Status", "Fail", "Message", ex.getMessage()));
         }
-
     }
 
     /* Unsubscribe  */
     @RequestMapping(value = "/notification/unsubscribe", method = RequestMethod.POST)
-    public ResponseEntity unsubscribe(@RequestBody Map<String,Object> body) {
+    public ResponseEntity unsubscribe(@RequestBody Map<String, Object> body) {
         try {
             validateRequest(body);
+            String timeStamp= String.valueOf(Instant.now());
+            UUID mId =UUID.randomUUID();
+            String action="notification/Unsubscribe";
             String senderCode = (String) body.get("sender_code");
             String recipientCode = (String) body.get("recipient_code");
             String topicCode = (String) body.get("topic_code");
@@ -71,6 +87,8 @@ public class HomeControllers {
             if (result == 0)
                 throw new ClientException("subscription does not exist");
             else {
+                Map<String,Object> kafkaProducer=Map.of("ets",timeStamp,"mid",mId,"action",action,"sender_code",senderCode,"recipient_code",recipientCode,"topic_code",topicCode,"subscription_id",subscriptionId );
+                kafkaTemplate.send(TOPIC,kafkaProducer);
                 Map<String, String> responseMap = Map.of("subscriptionId", subscriptionId, "subscription_status", "InActive");
                 return ResponseEntity.ok(responseMap);
             }
@@ -79,12 +97,14 @@ public class HomeControllers {
         }
     }
 
+
+
     /*SubscriptionList */
     @RequestMapping(value = "/notification/subscription/list", method = RequestMethod.POST)
-    public ResponseEntity subscriptionList(@RequestBody Map<String,Object> body) {
+    public ResponseEntity subscriptionList(@RequestBody Map<String, Object> body) {
         try {
             System.out.println(body);
-            if(body.isEmpty())
+            if (body.isEmpty())
                 throw new ClientException("receipientcode is missing or empty ");
             validateProperty(body, "recipient_code");
             String recipientCode = (String) body.get("recipient_code");
@@ -108,10 +128,11 @@ public class HomeControllers {
         }
     }
 
-    private void validateProperty(Map<String,Object> body, String property) throws ClientException {
+    private void validateProperty(Map<String, Object> body, String property) throws ClientException {
         if (!body.containsKey(property) || ((String) body.getOrDefault(property, "")).isEmpty())
             throw new ClientException("'" + property + "' is missing or empty");
     }
+
 
 
 }
