@@ -1,14 +1,13 @@
 package com.demohcx;
 
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DemoSpringBootApApplication {
+public class DemoSpringBootApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(DemoSpringBootApApplication.class, args);
+		SpringApplication.run(DemoSpringBootApplication.class, args);
 	}
 
 

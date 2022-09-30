@@ -8,10 +8,10 @@
 		<version>2.7.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.demo-hcx</groupId>
-	<artifactId>demo-SpringBootAp</artifactId>
+	<groupId>com.demohcx</groupId>
+	<artifactId>demo-springboot</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>demo-SpringBootAp</name>
+	<name>demo-springboot</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>11</java.version>
@@ -52,6 +52,7 @@
 				<version>2.7.3</version>
 			</plugin>
 		</plugins>
+		<finalName>docker-spring-boot</finalName>
 	</build>
 
 </project>

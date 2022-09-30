@@ -1,0 +1,18 @@
+version: "2.4"
+
+services:
+  demo-spring:
+    image: demo-hcx-springboot:latest
+    ports:
+      - "8085:8085"
+    depends_on :
+      db:
+        condition: service_started
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
