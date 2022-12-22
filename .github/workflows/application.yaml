@@ -1,56 +1,42 @@
-name: Deploy
+name: Flutter_Web_On_Demand
+
 on:
   workflow_dispatch:
     inputs:
-      cluster-name:
-        description: 'Build Cluster'
+      flutter_version:
+        description: 'Framework version'
+        required: true
+        default: '2.5.3'
+      publish_artifacts:
+        description: 'Publish artifacts'
         required: true
         default: 'true'
-      namespace:
-        description: 'Build ENV'
-        required : true
-        default: 'true'
+
 jobs:
-  deployment:
-    runs-on: 'ubuntu-latest'
+  build_web:
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout the code
+        uses: actions/checkout@v2
 
-      - name: AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Set Flutter version
+        uses: subosito/flutter-action@v2.2.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          flutter-version: '${{ github.event.inputs.flutter_version }}'
 
-      - name: Checkout private
-        uses: actions/checkout@v3
+      - name: Display Flutter version
+        run: flutter --version
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        run: flutter build web --release
+
+      - if: github.event.inputs.publish_artifacts == 'true'
+        name: Publish Artifacts
+        uses: actions/upload-artifact@v2
         with:
-          # repository: Swasth-Digital-Health-Foundation/DevOps
-          repository: Swasth-Digital-Health-Foundation/DevOps
-          ref: 'workflow'
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          submodules: recursive
-          path: DevOps
-
-      - name: Check file structure
-        run: ls -lrt ${{ github.workspace }}
-
-      - name: 'Deploy'
-        uses: bitovi/github-actions-deploy-eks-helm@v1.1.0
-        # uses: vimeda/helm@v1.6.8
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS__KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # cluster-role-arn: arn:aws:iam::131795456882:user/hcx
-          aws-region: ap-south-1
-          # aws-profile: git-deploy
-          cluster-name: '${{ github.event.inputs.cluster-name }}'
-          name: 'demo-app'
-          namespace: '${{ github.event.inputs.namespace }}'
-          # release: api-gateway
-          chart-path: 'application/helm/core/demo-app/'
-          config-files: 'application/helm/core/demo-app/values.yaml, DevOps/hcx/ansible/inventory/dev/group_vars/dev.yaml' #, https://github.com/Swasth-Digital-Health-Foundation/DevOps/blob/workflow/hcx/ansible/inventory/dev/group_vars/dev.yaml'
-
-        env:
-          KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
+          name: artifacts
+          path: build/web
