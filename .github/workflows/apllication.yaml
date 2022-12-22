@@ -33,9 +33,7 @@ jobs:
 
       - name: Build Flutter Web
         run: flutter build web --release
-        
-      - name: path
-        run : pwd
+  
 
       - if: github.event.inputs.publish_artifacts == 'true'
         name: Publish Artifacts
