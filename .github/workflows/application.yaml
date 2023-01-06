@@ -20,10 +20,10 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
-      - name: Set Flutter version
-        uses: subosito/flutter-action@v2.2.0
-        with:
-          flutter-version: '${{ github.event.inputs.flutter_version }}'
+#       - name: Set Flutter version
+#         uses: subosito/flutter-action@v2.2.0
+#         with:
+#           flutter-version: '${{ github.event.inputs.flutter_version }}'
 
       - name: Display Flutter version
         run: flutter --version
